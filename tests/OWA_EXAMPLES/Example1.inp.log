@@ -1,0 +1,26 @@
+
+
+*********************************************
+* Binary File Comparison Statistics Section *
+*********************************************
+
+   Flog.file                                                C:\Xing_Test_Programs\OWA_EXAMPLES\Example1.inp.log
+   FoutCompare.file                                         C:\Xing_Test_Programs\OWA_EXAMPLES\Example1.inp.out
+   Fout.file                                                C:\Xing_Test_Programs\OWA_EXAMPLES\Example1.inp.out
+
+   Fout.file Version                                        51013
+   Fout.file MagicNumber                                    516114522
+   Fout.file Flow units                                     0
+   Fout.file Report Step                                    3600
+   Fout.file Nperiods                                       0
+   Fout.file Starting file position of ID names             28
+   Fout.file Starting file position of input data           246
+   Fout.file Starting file position of output data          942
+   Fout.file number of bytes per time period                1200
+   Fout.file Number of subcatchment output variables        10
+   Fout.file Number of node output variables                8
+   Fout.file Number of link output variables                7
+   Fout.file Number of subcatchments reported on            8
+   Fout.file Number of nodes reported on                    14
+   Fout.file Number of links reported on                    13
+   Fout.file Number of pollutants reported on               2
