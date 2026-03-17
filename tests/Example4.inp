@@ -1,0 +1,153 @@
+; OWA SWMM Example 4 – Water Quality with Buildup/Washoff and LID
+; Source: OpenWaterAnalytics SWMM test suite / EPA SWMM 5 Example 4
+; Tests:  TSS buildup/washoff, land use assignment, bioretention LID
+
+[TITLE]
+Example 4 – Water Quality and LID Controls
+Runoff quality simulation with TSS buildup/washoff and a bioretention cell.
+
+[OPTIONS]
+FLOW_UNITS           CFS
+INFILTRATION         GREEN_AMPT
+FLOW_ROUTING         DYNWAVE
+LINK_OFFSETS         DEPTH
+MIN_SLOPE            0
+ALLOW_PONDING        NO
+SKIP_STEADY_STATE    NO
+START_DATE           06/15/2007
+START_TIME           00:00:00
+REPORT_START_DATE    06/15/2007
+REPORT_START_TIME    00:00:00
+END_DATE             06/15/2007
+END_TIME             12:00:00
+SWEEP_START          01/01
+SWEEP_END            12/31
+DRY_DAYS             3
+REPORT_STEP          00:05:00
+WET_STEP             00:01:00
+DRY_STEP             01:00:00
+ROUTING_STEP         0:00:15
+
+[RAINGAGES]
+;;Name  Format    Interval  SCF  Source    SeriesName
+RG1     INTENSITY 0:05      1.0  TIMESERIES TS_RAIN
+
+[SUBCATCHMENTS]
+;;Name  RainGage  Outlet  Area  %Imperv  Width  %Slope  CurbLen
+S1      RG1       J1      5.0   80       200    1.5     500
+S2      RG1       J2      8.0   40       280    0.5     400
+
+[SUBAREAS]
+;;Subcat  NImperv  NPerv  SImperv  SPerv  PctZero  RouteTo
+S1        0.011    0.10   0.05     0.05   25       OUTLET
+S2        0.011    0.10   0.05     0.05   25       OUTLET
+
+[INFILTRATION]
+;;Subcat  Suction  Ksat   IMD
+S1        3.5      0.52   0.26
+S2        3.5      0.52   0.26
+
+[JUNCTIONS]
+;;Name  Elev  MaxDepth  InitDepth  SurDepth  Ponded
+J1      2.0   10        0          0         0
+J2      1.0   10        0          0         0
+J3      0.5   10        0          0         0
+
+[OUTFALLS]
+;;Name  Elev  Type  StageData  TideGate
+Out1    0.0   FREE             NO
+
+[CONDUITS]
+;;Name  From  To    Length  Rough  InOffset  OutOffset  InitFlow  MaxFlow
+C1      J1    J3    300     0.015  0         0          0         0
+C2      J2    J3    200     0.015  0         0          0         0
+C3      J3    Out1  100     0.015  0         0          0         0
+
+[XSECTIONS]
+;;Link  Shape     Geom1  Geom2  Geom3  Geom4  Barrels
+C1      CIRCULAR  1.0    0      0      0      1
+C2      CIRCULAR  1.0    0      0      0      1
+C3      CIRCULAR  1.0    0      0      0      1
+
+[POLLUTANTS]
+;;Name  Units  CRain  CGW  CII  Kdecay  SnowOnly  CoPollut  CoFract
+TSS     MG/L   0.0    0.0  0.0  0.0     NO
+
+[LANDUSES]
+;;Name               SweepInterval  Availability  LastSweep
+Residential          0              0             0
+Commercial           0              0             0
+
+[COVERAGES]
+;;Subcat  LandUse      Percent
+S1        Residential  60
+S1        Commercial   40
+S2        Residential  100
+
+[BUILDUP]
+;;LandUse     Pollutant  FuncType  C1     C2     C3  Normalizer
+Residential   TSS        POW       22.5   0.4    0   AREA
+Commercial    TSS        POW       54.8   0.4    0   AREA
+
+[WASHOFF]
+;;LandUse     Pollutant  FuncType  C1     C2   SweepEffic  BMPEffic
+Residential   TSS        EXP       0.182  2.0  0           0
+Commercial    TSS        EXP       0.182  2.0  0           0
+
+[INFLOWS]
+;;Node  Constituent  TimeSeries  Type    UnitsFactor  ScaleFactor  Baseline  Pattern
+; (no external inflows)
+
+[LID_CONTROLS]
+;;Name    Type
+BRC1      BC
+;;Name    Layer    Parameters …
+BRC1      SURFACE  0       0.1   0     0      1     0
+BRC1      SOIL     18      0.5   0.1   0.3    2.0   0.3   30    0
+BRC1      STORAGE  12      0.5   0.5   0      0
+BRC1      DRAIN    0.5     0.5   6     6      0
+
+[LID_USAGE]
+;;Subcat  LIDProcess  Number  Area     Width  InitSat  FromImp  ToPerv  RptFile  DrainTo  FromPerv
+S1        BRC1        1       2000     25     0        25       0
+
+[TIMESERIES]
+;;Name    Date  Time   Value
+TS_RAIN         0:00   0.00
+TS_RAIN         0:30   0.00
+TS_RAIN         1:00   1.20
+TS_RAIN         1:30   2.40
+TS_RAIN         2:00   1.80
+TS_RAIN         2:30   0.60
+TS_RAIN         3:00   0.00
+TS_RAIN        12:00   0.00
+
+[REPORT]
+INPUT         NO
+CONTROLS      NO
+SUBCATCHMENTS ALL
+NODES         ALL
+LINKS         ALL
+
+[MAP]
+DIMENSIONS  0.00  0.00  10000.00  10000.00
+Units       None
+
+[COORDINATES]
+;;Node  X-Coord  Y-Coord
+J1      2000     6000
+J2      4000     6000
+J3      5000     5000
+Out1    6500     5000
+
+[VERTICES]
+
+[POLYGONS]
+S1  1000  6500
+S1  3000  6500
+S1  3000  5500
+S1  1000  5500
+S2  3500  6500
+S2  5500  6500
+S2  5500  5500
+S2  3500  5500

@@ -1,0 +1,155 @@
+; OWA SWMM Example 5 – Pump Station, Force Main, and Control Rules
+; Source: OpenWaterAnalytics SWMM test suite / EPA SWMM 5 Example 5
+; Tests:  Pump curve, force main H-W equation, rule-based control
+
+[TITLE]
+Example 5 – Pump Station and Force Main
+Wet-well cycling with a pump, force main rising main, and control rules
+that toggle the pump based on wet-well depth.
+
+[OPTIONS]
+FLOW_UNITS           CFS
+INFILTRATION         HORTON
+FLOW_ROUTING         DYNWAVE
+LINK_OFFSETS         DEPTH
+MIN_SLOPE            0
+ALLOW_PONDING        NO
+SKIP_STEADY_STATE    NO
+FORCE_MAIN_EQUATION  H-W
+START_DATE           01/01/2007
+START_TIME           00:00:00
+REPORT_START_DATE    01/01/2007
+REPORT_START_TIME    00:00:00
+END_DATE             01/02/2007
+END_TIME             00:00:00
+SWEEP_START          01/01
+SWEEP_END            12/31
+DRY_DAYS             0
+REPORT_STEP          00:05:00
+WET_STEP             00:05:00
+DRY_STEP             01:00:00
+ROUTING_STEP         0:00:30
+
+[RAINGAGES]
+;;Name  Format    Interval  SCF  Source    SeriesName
+RG1     VOLUME    1:00      1.0  TIMESERIES TS_RAIN
+
+[SUBCATCHMENTS]
+;;Name  RainGage  Outlet  Area  %Imperv  Width  %Slope  CurbLen
+S1      RG1       J1      50    60       800    0.5     0
+
+[SUBAREAS]
+;;Subcat  NImperv  NPerv  SImperv  SPerv  PctZero  RouteTo
+S1        0.01     0.10   0.05     0.05   25       OUTLET
+
+[INFILTRATION]
+;;Subcat  MaxRate  MinRate  Decay  DryTime  MaxInfil
+S1        3.0      0.5      4.14   7        0
+
+[JUNCTIONS]
+;;Name  Elev   MaxDepth  InitDepth  SurDepth  Ponded
+J1      10.0   15        0          0         0
+J2      9.0    15        0          0         0
+
+[STORAGE]
+;;Name    Elev  MaxDepth  InitDepth  Shape     CurveName  A1    A2  A0  Ponded  Fevap  Seep
+WetWell   0.0   15.0      4.0        FUNCTIONAL            314   0   0   0       0      0
+
+[OUTFALLS]
+;;Name   Elev   Type  StageData  TideGate
+Out_FM   25.0   FREE             NO
+
+[CONDUITS]
+;;Name  From  To       Length  Rough  InOffset  OutOffset  InitFlow  MaxFlow
+C1      J1    J2       300     0.013  0         0          0         0
+C2      J2    WetWell  200     0.013  0         0          0         0
+
+[PUMPS]
+;;Name  FromNode  ToNode   Curve   Status  Suctionft  OffDepth
+P1      WetWell   FM_Node  PC1     OFF     0          2.0
+
+[ORIFICES]
+; none
+
+[XSECTIONS]
+;;Link  Shape     Geom1  Geom2  Geom3  Geom4  Barrels
+C1      CIRCULAR  1.5    0      0      0      1
+C2      CIRCULAR  1.5    0      0      0      1
+
+[JUNCTIONS]
+;;Name   Elev   MaxDepth  InitDepth  SurDepth  Ponded
+FM_Node  20.0   10        0          0         0
+
+[CONDUITS]
+;;Force Main from pump discharge to outfall
+FM1     FM_Node  Out_FM   500     130    0         0          0         0
+
+[XSECTIONS]
+FM1     CIRCULAR  0.667  0      0      0      1
+
+[LOSSES]
+;;Link  Kin  Kout  Kavg  Flap  Seepage
+FM1     0.5  1.0   0     NO    0
+
+[CURVES]
+;;Name  Type  X-Value  Y-Value
+PC1     PUMP3 0        5.0
+PC1           2        4.5
+PC1           4        4.0
+PC1           6        3.2
+PC1           8        2.5
+PC1           10       1.5
+PC1           12       0.5
+
+[CONTROLS]
+RULE R1
+IF   NODE WetWell DEPTH >= 8.0
+THEN PUMP P1 STATUS = ON
+PRIORITY 1
+
+RULE R2
+IF   NODE WetWell DEPTH <= 2.0
+THEN PUMP P1 STATUS = OFF
+PRIORITY 2
+
+[DWF]
+;;Node    Constituent  AvgValue  Pat1
+WetWell   FLOW         0.10
+
+[TIMESERIES]
+;;Name    Date  Time   Value
+TS_RAIN         0:00   0.00
+TS_RAIN         1:00   0.20
+TS_RAIN         2:00   0.50
+TS_RAIN         3:00   0.30
+TS_RAIN         4:00   0.00
+TS_RAIN        24:00   0.00
+
+[REPORT]
+INPUT      NO
+CONTROLS   YES
+SUBCATCHMENTS ALL
+NODES      ALL
+LINKS      ALL
+
+[MAP]
+DIMENSIONS  0.00  0.00  10000.00  10000.00
+Units       None
+
+[COORDINATES]
+;;Node    X-Coord  Y-Coord
+J1        1000     5000
+J2        2500     5000
+WetWell   4000     5000
+FM_Node   4000     7000
+Out_FM    5500     7000
+
+[VERTICES]
+C1    1750  5000
+C2    3250  5000
+
+[POLYGONS]
+S1  500   5500
+S1  1500  5500
+S1  1500  4500
+S1  500   4500

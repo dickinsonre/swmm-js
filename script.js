@@ -1,571 +1,375 @@
-// Chartspecs and DataElement should be eliminated, so do not do anything with it.
-//const { data } = require("jquery");
-
-// dataElements are classes for data row/objects.
-class DataElement{
-    constructor(cat, y){
-        // cat: a category, numeric value.
-        //this.cat = new Date(2000, 0, 1, cat.split(':')[0], cat.split(':')[1]);
-        this.cat = cat;
-        // y: independent numeric value.
-        this.y = y;
-    }
-}
-
-// ChartSpecs holds the general display parameters and data for a chart.
-class ChartSpecs {
-    // Constructor for parts of the chart that depend upon the data.
-    constructor(data){
-        // The x/y relational data for the chart.
-        this.data = data;
-
-        // Establish the basic parameters of the display
-        // The starting position of the chart.
-        this.chartBodyX = 50;
-        this.chartBodyY = 0;
-        // The relative size of the axes.
-        this.xScaleWidth = 300;
-        this.yScaleHeight = 200;
-        // The number of tick marks on the x axis.
-        this.numTicks = 5;
-        // The amount of space to allocate for text,e etc. on the x and y axes.
-        this.textBuffer = 60;
-        this.topMargin = 10;
-
-        // Take calcs out of loop functions.
-        this.theMax = 0;
-        this.theExtents;
-    }
-    
-    // The maximum value of the independent variable.
-    get maxVal() {
-        return d3.max(this.data, d => d.y);
-    }
-
-    // To create a scaling Y function for the chart, use this getter.
-    get scaleY() {
-        return d3.scaleLinear()
-            .range([this.yScaleHeight, 0])
-            .domain([0, this.theMax]);
-    }
-
-    // To create a scaling X function for the chart, use this getter.
-    get scaleX() {
-        return d3.scaleTime()
-            .range([0, this.xScaleWidth])
-            //.domain(d3.extent(this.data, d=>d.cat))
-            .domain(this.theExtents)
-    }
-
-    setMax(){
-        this.theMax = d3.max(this.data, d=>d.y);
-    }
-
-    setExtents(){
-        this.theExtents = d3.extent(this.data, d=>d.cat)
-    }
-}
-
-
-// When the document is loaded:
-// Create some data
-// Draw a line chart with the data.
-document.addEventListener("DOMContentLoaded", function() {
-
-    // Personalization variables.
-    let fileName = null;
-    let authorName = null;
-    let description = null;
-
-    
-    /////////////////////////////////////////////
-    // Cover modal: for project intros, demos, etc.
-    /////////////////////////////////////////////
-    if(document.getElementById("modalCover")){
-        if(document.getElementById("defaultModel1")){
-            document.getElementById("defaultModel1").addEventListener('click', 
-                        function () {
-                            jQuery.get('./data/Example1.inp', function(contents){
-                                processInput(contents);
-                            })
-                            $('#modalCover').modal('toggle');
-                        },
-                        false)
-        }
-    
-        if(document.getElementById("defaultModel2")){
-            document.getElementById("defaultModel2").addEventListener('click', 
-                        function () {
-                            jQuery.get('./data/Example2.inp', function(contents){
-                                processInput(contents);
-                            })
-                            $('#modalCover').modal('toggle');
-                        },
-                        false)
-        }
-        $('#modalCover').modal('toggle');
-    }
-
-    /////////////////////////////////////////////
-    // Visualization elements - temporary
-    /////////////////////////////////////////////
-    // dataObj is an array of dataElement objects.
-    dataObj = [];
-    let viz_svg01 = d3.select("#viz_svg01");
-    let inpText = null;
-
-
-    /////////////////////////////////////////////
-    // Modal controls.
-    /////////////////////////////////////////////
-    // Get the modal
-    let modal = document.getElementById("myModal");
-    $('.modal-backdrop').remove();
-    
-
-    /////////////////////////////////////////////
-    // Project Tree controls.
-    /////////////////////////////////////////////
-
-    // Setting up to process input file.
-    Module.onRuntimeInitialized = _ => {
-        // Process the metadata file
-        // Load info.json if there is a cover modal
-        if(document.getElementById("modalCover")){
-            fetchRetry('./data/info.json', 500, 20, {headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}});
-        }
-    }
-
-    // Listen for requests to open the default file.
-    const demoElement = document.getElementById("nav-file-demo");
-    if(demoElement){
-        demoElement.addEventListener('click', loadDemo, false);
-        function loadDemo() {
-            jQuery.get('./data/Mod.inp', function(contents){
-                processInput(contents);
-            })
-        }
-    }
-
-    // Listen for requests to create a new file.
-    const newFileElement = document.getElementById("nav-file-new");
-    if(newFileElement){
-        newFileElement.addEventListener('click', createNewFile, false);
-        function createNewFile() {
-            document.getElementById('inpFile').value =
-                `[TITLE]
-                ;;Project Title/Notes
-
-                [OPTIONS]
-                ;;Option             Value
-                FLOW_UNITS           CFS
-                INFILTRATION         HORTON
-                FLOW_ROUTING         KINWAVE
-                LINK_OFFSETS         DEPTH
-                MIN_SLOPE            0
-                ALLOW_PONDING        NO
-                SKIP_STEADY_STATE    NO
-
-                START_DATE           03/26/2021
-                START_TIME           00:00:00
-                REPORT_START_DATE    03/26/2021
-                REPORT_START_TIME    00:00:00
-                END_DATE             03/26/2021
-                END_TIME             06:00:00
-                SWEEP_START          1/1
-                SWEEP_END            12/31
-                DRY_DAYS             0
-                REPORT_STEP          00:15:00
-                WET_STEP             00:05:00
-                DRY_STEP             01:00:00
-                ROUTING_STEP         0:00:30 
-
-                INERTIAL_DAMPING     PARTIAL
-                NORMAL_FLOW_LIMITED  BOTH
-                FORCE_MAIN_EQUATION  H-W
-                VARIABLE_STEP        0.75
-                LENGTHENING_STEP     0
-                MIN_SURFAREA         0
-                MAX_TRIALS           0
-                HEAD_TOLERANCE       0
-                SYS_FLOW_TOL         5
-                LAT_FLOW_TOL         5
-
-                [EVAPORATION]
-                ;;Evap Data      Parameters
-                ;;-------------- ----------------
-                CONSTANT         0.0
-                DRY_ONLY         NO
-
-                [REPORT]
-                ;;Reporting Options
-                INPUT      NO
-                CONTROLS   NO
-                SUBCATCHMENTS ALL
-                NODES ALL
-                LINKS ALL
-
-                [TAGS]
-
-                [MAP]
-                DIMENSIONS 0.000 0.000 10000.000 10000.000
-                Units      None
-
-                [COORDINATES]
-                ;;Node           X-Coord            Y-Coord           
-                ;;-------------- ------------------ ------------------
-
-                [VERTICES]
-                ;;Link           X-Coord            Y-Coord           
-                ;;-------------- ------------------ ------------------
-                `
-            processInput(document.getElementById('inpFile').value);
-        }
-    }
-    
-
-    // Listen for requests to run the simulation.
-    const runElement = document.getElementById("nav-project-runsimulation");
-    if(runElement){
-        runElement.addEventListener('click', runSimulation, false);
-        function runSimulation() {
-            //processInput(document.getElementById('inpFile').value);
-            // Pop up the processing modal.
-            $('#modalSpinner').modal('show')
-            runModelClick();
-        }
-    }
-
-
-    // Listen for requests to display a project summary.
-    const summaryElement = document.getElementById("nav-project-summary");
-    if(summaryElement){
-        summaryElement.addEventListener('click', displayProjectSummary, false);
-        function displayProjectSummary(){
-            modalProjectSummary();
-        }
-    }
-
-    // Listen for requests to display a report status 
-    const reportstatusElement = document.getElementById("nav-report-status");
-    if(reportstatusElement){
-        reportstatusElement.addEventListener('click', displayReportStatus, false);
-        function displayReportStatus() {
-            modalReportStatus();
-        }
-    }
-
-    // Listen for requests to open an .inp file.
-    const inputElement = document.getElementById("nav-file-input");
-    if(inputElement){
-        inputElement.addEventListener('change', handleFiles, false);
-        function handleFiles() {
-            const fileList = this.files;
-    
-            let fr = new FileReader();
-            fr.onload=function(){
-                if(fr.result){inpText = 
-                    processInput(fr.result)
-                }
-            }
-    
-            fr.readAsText(fileList[0]);
-        }
-    }
-
-    // Listen for requests to change the language:
-    const languageElement = document.getElementById("navbarLanguageLink");
-    if(languageElement){
-        languageElement.addEventListener('click', displayLanguageModal, false);
-        function displayLanguageModal() {
-            $('#modalLanguage').modal('toggle');
-        }
-    }
-
-    // Listen for requests to save an .inp file.
-    const saveElement = document.getElementById("save");
-    if(saveElement){
-        saveElement.addEventListener('click', saveFile, false);
-        function saveFile() {
-            swmmjs.svg.save();
-        }
-    }
-})
-
-
-// Read the input file (text). 
-// Parse the data into memory. 
-// Run the model.
-
-function processInput(inpText){
-    try
-    {
-        $('#modalSpinner').modal('show');
-        document.getElementById('inpFile').value = inpText;
-        swmmjs.loadModel(swmmjs.Module)
-        //swmmjs.run(swmmjs.Module);
-        $('#modalSpinner').modal('hide');
-    } catch (e) {
-        console.log('/input.inp creation failed');
-        $('#modalSpinner').modal('hide');
-    }
-}
-
-
-// representData draws the chart
-// location is an svg where the chart will be drawn.
-// theseSpecs is an object of class ChartSpecs
-function representData(location, theseSpecs){
-    // Create the viewbox. This viewbox helps define the visible portions
-    // of the chart, but it also helps when making the chart responsive.
-    location.attr('viewBox', ` 0 0 ${theseSpecs.xScaleWidth + theseSpecs.chartBodyX + theseSpecs.textBuffer} ${theseSpecs.yScaleHeight + theseSpecs.textBuffer + theseSpecs.topMargin}`);
-
-    // Add groups to the svg for the body of the chart, the x axis, and the y axis.
-    body = location.append('g')
-        .attr('id', 'chartBody')
-        .attr('transform', `translate(${theseSpecs.chartBodyX}, ${theseSpecs.topMargin})`);
-    location.append('g')
-        .attr('id', 'yAxis')
-        .call(d3.axisLeft(theseSpecs.scaleY))
-        .attr('transform', `translate(${theseSpecs.chartBodyX}, ${theseSpecs.topMargin})`);
-    location.append('g')
-        .attr('id', 'xAxis')
-        .attr('transform', `translate(${theseSpecs.chartBodyX}, ${theseSpecs.yScaleHeight + theseSpecs.topMargin})`);
-
-    // Create the location for the line
-    body.append('path')
-
-    drawLine(theseSpecs, d3.curveLinear);
-}
-
-function drawLine(theseSpecs, curveType){
-    theseSpecs.setMax();
-    theseSpecs.setExtents();
-    // Create the line
-    let line = d3.line()
-        .x(function(d) { return theseSpecs.scaleX(d.cat); })
-        .y(function(d) { return theseSpecs.scaleY(d.y); })
-        .curve(curveType)
-
-    // Create a join on 'path' and the data
-    let join = d3.selectAll('#chartBody')
-        .append('path')
-        .attr('d', line(theseSpecs.data))
-        .attr('stroke', 'rgba(255, 125, 125, 1)')
-        .attr('stroke-width', '2px')
-        .style('fill', 'none')
-
-    // Update the y axis.
-    d3.selectAll('#yAxis')
-        .call(d3.axisLeft(theseSpecs.scaleY))
-
-    // Update the x axis.
-    d3.selectAll('#xAxis')
-        .call(
-            d3.axisBottom(theseSpecs.scaleX)
-            .ticks(5)
-            .tickFormat(d3.timeFormat('%Y-%m-%d %H:%M'))
-        )
-        .selectAll('text')
-        //split the date and time onto two lines for the xAxis
-        .call(function(t){
-            t.each(function(d){
-                let self = d3.select(this);
-                var s = self.text().split(' ');
-                self.text('');
-                self.append('tspan')
-                    .attr('x', 0)
-                    .attr('dy', 0)
-                    .text(s[0]);
-                self.append('tspan')
-                    .attr('x', '-2em')
-                    .attr('dy', '1em')
-                    .text(s[1]);
-            })
-        })
-        .style('text-anchor', 'end')
-        .attr('dx', '-0.8em')
-        .attr('dy', '0.15em')
-        .attr('transform', 'rotate(-65)');
-
-}
-
-const swmm_run = Module.cwrap('swmm_run', 'number', ['string', 'string', 'string']);
-const swmm_transcribe = Module.cwrap('swmm_transcribe', 'number', ['string', 'string', 'string']);
-
-/////////////////////////////////////////////////////////////////////////
-// Network file functions
-/////////////////////////////////////////////////////////////////////////
-
-function wait(delay){
-    return new Promise((resolve) => setTimeout(resolve, delay));
-}
-
-function fetchRetry(url, delay, tries, fetchOptions = {}){
-    $.ajax({
-        url: url,
-        dataType: 'json',
-        success: function(json){
-            //alert('Loaded file: info.json')
-            $('#coverTitle').text(json[0].Title);
-            // For each entry in info[0].Files: 
-            //  -- add the Title to the dropdown select
-            //  -- clicking on the select will:
-            //     -- close the modal.
-            //     -- load the selected file.
-            $('#coverDropdown').empty();
-            json[0].Files.forEach(function(value, i) {
-                $('#coverDropdown').append('<a class="dropdown-item" id="coverModel'+i+'">'+ value.Title +'</a>')
-                document.getElementById("coverModel"+i).addEventListener('click', 
-                function () {
-                    jQuery.get(value.FileLoc, function(contents){
-                        processInput(contents);
-                    })
-                    $('#modalCover').modal('toggle');
-                },
-                false)
-            })
-        },
-        error: function(xhr, textStatus, errorThrown){
-            if(textStatus == 'timeout'){
-                this.tryCount++;
-                if(this.tryCount <= this.retryLimit){
-                    //try again
-                    $.ajax(this);
-                    return;
-                }
-                return;
-            }
-            if(xhr.status == 500){
-                this.tryCount++;
-                if(this.tryCount <= this.retryLimit){
-                    //try again
-                    $.ajax(this);
-                    return;
-                }
-                return;
-            }else {
-                alert('Cannot find data file: info.json')
-            }
-        },
-        tryCount: 0,
-        retryLimit: 5
-    })
-}
-
-
-/*function inpToJSON(){
-    let inpText = document.getElementById('inpFile').value;
-    
-    try
-    {
-        FS.createPath('/', '/', true, true);
-        FS.ignorePermissions = true;
-        var f = FS.findObject('input.inp');
-        if (f) {
-            FS.unlink('input.inp');
-        }
-        FS.createDataFile('/', 'input.inp', inpText, true, true);
-
-        let JSONpointer = swmm_transcribe("/input.inp", "data/Example1x.rpt", "data/out.out");
-        return JSONpointer;
-
-    } catch (e) {
-        console.log('/input.inp creation failed');
-        // Remove the processing modal.
-        $('#modalSpinner').modal('hide')
-        
-    } finally{
-        // Remove the processing modal.
-        $('#modalSpinner').modal('hide')
-    }
-    console.log('runran')
-}*/
-
-function runModelClick(){
-    // dataObj is an array of dataElement objects.
-    dataObj = [];
-    let inpText = null;
-    // Create a set of dataElements.
-
-    //Get the input file for parsing:
-    // Since we are running a model, it would be a good idea to
-    // write the current model objects into a string field,
-    // then send that string field to the executable.
-    // --1: Translate the model to a string vSia svg.save() in swmm.js
-    // --2: Modify svg.save to instead call a string creation function.
-    //      This function can then be called by this click event as well, so no files
-    //      need to be saved (though it would be a good idea to save a file before you run it, right?)
-    // --3: New function is called svg.dataToInpString().
-    // --4: To send the inpString to the swmm_run file, inpText can be used.
-    fetch('data/info.json')
-        .then(response => response.text())
-        .then((data) => {
-        inpText = swmmjs.svg.dataToInpString();
-        
-        try
-        {
-            FS.createPath('/', '/', true, true);
-            FS.ignorePermissions = true;
-            var f = FS.findObject('input.inp');
-            if (f) {
-                FS.unlink('input.inp');
-            }
-            FS.createDataFile('/', 'input.inp', inpText, true, true);
-
-            async function processModel(){
-                    swmm_run("/input.inp", "data/Example1x.rpt", "data/out.out");
-                    return 1;
-            }
-
-            processModel().then(function (){
-                let rpt = intArrayToString(FS.findObject('data/Example1x.rpt').contents);
-                document.getElementById('rptFile').innerHTML = rpt;
-                modalReportStatus();
-            })
-
-        } catch (e) {
-            console.log('/input.inp creation failed');
-            // Remove the processing modal.
-            $('#modalSpinner').modal('hide')
-            
-        } finally{
-            // Remove the processing modal.
-            $('#modalSpinner').modal('hide')
-        }
-        console.log('runran')
-    })
-}
-
-/*************************************
- * Ripple effect for buttons
+/**
+ * script.js  –  swmm-js main application module
+ * ------------------------------------------------
+ * Responsibilities:
+ *   - File open / save (local .inp)
+ *   - Test model loader (OWA examples from /data/test/)
+ *   - State-driven UI updates via swmmState
+ *   - Network canvas rendering via D3
+ *   - Tabulator results table
+ *   - Bootstrap 5 modal / toast helpers
+ *
+ * What changed from the original:
+ *   - Removed all jQuery (replaced with vanilla DOM / fetch)
+ *   - Removed hidden <span> state (now in swmmState.js)
+ *   - Bootstrap data-bs-* attributes (was data-toggle / data-dismiss)
+ *   - No babel-standalone; plain ES modules throughout
+ *   - moment.js → date-fns (imported per-function, zero overhead)
+ *   - Test models wired to the new "Test Models" nav menu
  */
 
- var buttons = document.body.getElementsByClassName("ripplebutton");
+import { parseInp, serializeInp }   from './src/swmmParser.js';
+import { state, setState, subscribe, resetState } from './src/swmmState.js';
+import { buildModelFromWasm }        from './src/swmmJsonBridge.js';
+import { format as fmtDate }         from 'date-fns';   // replaces moment
 
- Array.prototype.forEach.call(buttons, function (btn) {
-     btn.addEventListener('click', createRipple);
- });
- 
- function createRipple(e) {
-     var children = this.getElementsByClassName('wave-ripple');
-     while(children.length > 0){
-         children[0].parentNode.removeChild(children[0]);
-     };
-     
-     for(let i = 0; i < 4; i++){
-        var circle = document.createElement('div');
-        circle.style["position"] = 'absolute';  
-        this.appendChild(circle);      
-    
-        var d = Math.max(this.clientWidth, this.clientHeight);
-        var eRect = this.getBoundingClientRect()
-        
-        circle.style.width = circle.style.height = d*(10+2*i)/10 + 'px';
-        circle.style.left = e.clientX - eRect.left - d / 2 + 'px';
-        circle.style.top = e.clientY - eRect.top - d / 2 + 'px';
-        circle.classList.add('wave-ripple');
-     }
- }
+// ─── Bootstrap modal / toast handles (created once) ─────────────────────────
+const errorToastEl = document.getElementById('error-toast');
+const errorToast   = errorToastEl ? new bootstrap.Toast(errorToastEl) : null;
 
+function showError(msg) {
+  const body = document.getElementById('error-toast-body');
+  if (body) body.textContent = msg;
+  errorToast?.show();
+  console.error('[swmm-js]', msg);
+}
 
+// ─── Status bar helpers ───────────────────────────────────────────────────────
+function setStatus(msg, progress = null) {
+  const txt = document.getElementById('status-text');
+  const bar = document.getElementById('progress-bar');
+  const ctr = document.getElementById('progress-container');
+  if (txt) txt.textContent = msg;
+  if (progress !== null && bar && ctr) {
+    ctr.style.display = '';
+    bar.style.width   = `${progress}%`;
+    if (progress >= 100) setTimeout(() => { ctr.style.display = 'none'; }, 800);
+  }
+}
+
+// ─── File open ───────────────────────────────────────────────────────────────
+document.getElementById('nav-file-input')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    loadInpText(text, file.name);
+  } catch (err) {
+    showError(`Could not read file: ${err.message}`);
+  }
+  // reset the input so the same file can be re-opened
+  e.target.value = '';
+});
+
+// ─── Test model loader ────────────────────────────────────────────────────────
+document.querySelectorAll('.test-model-item').forEach(el => {
+  el.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const path = el.dataset.model;
+    setStatus(`Loading ${path}…`);
+    try {
+      const res  = await fetch(`/data/${path}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      loadInpText(text, path.split('/').pop());
+    } catch (err) {
+      showError(`Could not load ${path}: ${err.message}`);
+      setStatus('Ready');
+    }
+  });
+});
+
+// ─── Demo loader ─────────────────────────────────────────────────────────────
+document.getElementById('nav-demo-item')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const res  = await fetch('/data/test/Example1.inp').catch(() => null);
+  if (!res?.ok) { showError('Demo model not found'); return; }
+  const text = await res.text();
+  loadInpText(text, 'Example1.inp (demo)');
+});
+
+// ─── New model ────────────────────────────────────────────────────────────────
+document.getElementById('nav-new-item')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  resetState();
+  clearCanvas();
+  setStatus('New model created');
+  updateModelStats(null);
+});
+
+// ─── Save as .inp ─────────────────────────────────────────────────────────────
+document.getElementById('nav-saveas-item')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!state.model) { showError('No model loaded'); return; }
+  const text = state.inpFile ?? serializeInp(state.model);
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url,
+    download: 'model.inp',
+  });
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ─── Units toggle ─────────────────────────────────────────────────────────────
+document.getElementById('units-toggle')?.addEventListener('change', (e) => {
+  const units = e.target.checked ? 'SI' : 'US';
+  setState({ units });
+  document.getElementById('units-label').textContent = units;
+  if (state.model) renderNetwork(state.model);
+});
+
+// ─── Core: load INP text → parse → render ────────────────────────────────────
+function loadInpText(text, filename = 'model.inp') {
+  try {
+    setStatus(`Parsing ${filename}…`, 20);
+    const model = parseInp(text);
+    setState({ inpFile: text, model, status: 'loaded', activeExample: filename });
+    setStatus(`Loaded ${filename}`, 100);
+    updateModelStats(model);
+    renderNetwork(model);
+    populateSidebar(model);
+  } catch (err) {
+    showError(`Parse error in ${filename}: ${err.message}`);
+    setStatus('Parse failed');
+  }
+}
+
+// ─── Model statistics badge ───────────────────────────────────────────────────
+function updateModelStats(model) {
+  const el = document.getElementById('model-stats');
+  if (!el) return;
+  if (!model) { el.textContent = ''; return; }
+  const n  = model.junctions.length + model.outfalls.length + model.storage.length;
+  const l  = model.conduits.length  + model.pumps.length + model.orifices.length +
+             model.weirs.length     + model.outlets.length;
+  const s  = model.subcatchments.length;
+  el.textContent = `Nodes: ${n}  Links: ${l}  Subcat: ${s}`;
+}
+
+// ─── Project summary modal ────────────────────────────────────────────────────
+document.getElementById('proj-summary')?.addEventListener('click', () => {
+  if (!state.model) return;
+  const m   = state.model;
+  const rows = [
+    ['Raingages',      m.raingages.length],
+    ['Subcatchments',  m.subcatchments.length],
+    ['Aquifers',       (m._raw?.AQUIFERS ?? []).length],
+    ['Junctions',      m.junctions.length],
+    ['Outfalls',       m.outfalls.length],
+    ['Dividers',       m.dividers.length],
+    ['Storage nodes',  m.storage.length],
+    ['Conduits',       m.conduits.length],
+    ['Pumps',          m.pumps.length],
+    ['Orifices',       m.orifices.length],
+    ['Weirs',          m.weirs.length],
+    ['Outlets',        m.outlets.length],
+    ['Flow units',     m.options.FLOW_UNITS ?? '–'],
+    ['Routing model',  m.options.FLOW_ROUTING ?? '–'],
+    ['Infiltration',   m.options.INFILTRATION ?? '–'],
+  ];
+  const tbody = rows.map(([k,v]) =>
+    `<tr><td>${k}</td><td class="fw-bold">${v}</td></tr>`).join('');
+  const tbl = document.getElementById('proj-sum-table');
+  if (tbl) tbl.innerHTML = `<tbody>${tbody}</tbody>`;
+});
+
+// ─── D3 Network Canvas ────────────────────────────────────────────────────────
+let _d3Canvas = null;
+let _d3Svg    = null;
+
+function clearCanvas() {
+  const canvas = document.getElementById('map-panel');
+  if (canvas) canvas.innerHTML = '<canvas id="network-canvas" style="width:100%; border:1px solid #dee2e6; border-radius:4px;"></canvas>';
+  _d3Svg = null;
+}
+
+function renderNetwork(model) {
+  const panel = document.getElementById('map-panel');
+  if (!panel) return;
+
+  // Clear previous SVG (we use SVG via D3, not the <canvas> tag)
+  panel.innerHTML = '';
+  const W = panel.clientWidth  || 800;
+  const H = Math.max(400, panel.clientHeight || 500);
+
+  // Collect node positions from COORDINATES
+  const coords = model.coordinates ?? {};
+  const xs = Object.values(coords).map(c => c.x).filter(Number.isFinite);
+  const ys = Object.values(coords).map(c => c.y).filter(Number.isFinite);
+
+  if (!xs.length) {
+    panel.innerHTML = '<div class="text-muted p-4 text-center">No coordinate data — map not available</div>';
+    return;
+  }
+
+  const xScale = d3.scaleLinear().domain([Math.min(...xs), Math.max(...xs)]).range([40, W - 40]);
+  const yScale = d3.scaleLinear().domain([Math.min(...ys), Math.max(...ys)]).range([H - 40, 40]);
+
+  const svg = d3.select(panel).append('svg')
+    .attr('width',  W)
+    .attr('height', H)
+    .style('background', '#f8f9fa')
+    .style('border', '1px solid #dee2e6')
+    .style('border-radius', '4px');
+
+  // Zoom & pan
+  const g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.2, 12]).on('zoom', ({ transform }) => g.attr('transform', transform)));
+
+  // Draw polygon outlines for subcatchments
+  const polys = model.polygons ?? {};
+  g.selectAll('.subcat-poly')
+    .data(Object.entries(polys))
+    .join('polygon')
+    .attr('class', 'subcat-poly')
+    .attr('points', ([, pts]) => pts.map(p => `${xScale(p.x)},${yScale(p.y)}`).join(' '))
+    .attr('fill', 'rgba(144,190,109,0.25)')
+    .attr('stroke', '#52b788')
+    .attr('stroke-width', 0.8);
+
+  // Draw conduit vertices (polylines)
+  const allNodes = {
+    ...Object.fromEntries(model.junctions.map(n => [n.name, n])),
+    ...Object.fromEntries(model.outfalls.map(n => [n.name, n])),
+    ...Object.fromEntries(model.storage.map(n => [n.name, n])),
+  };
+
+  const allLinks = [
+    ...model.conduits.map(l => ({ ...l, _type: 'conduit' })),
+    ...model.pumps.map(l => ({ ...l, _type: 'pump' })),
+    ...model.weirs.map(l => ({ ...l, _type: 'weir' })),
+    ...model.orifices.map(l => ({ ...l, _type: 'orifice' })),
+  ];
+
+  const linkColor = { conduit: '#457b9d', pump: '#e63946', weir: '#f4a261', orifice: '#a8dadc' };
+
+  allLinks.forEach(link => {
+    const from = coords[link.fromNode];
+    const to   = coords[link.toNode];
+    if (!from || !to) return;
+
+    // Gather interior vertices
+    const verts = (model.vertices ?? {})[link.name] ?? [];
+    const points = [from, ...verts, to].map(p => [xScale(p.x), yScale(p.y)]);
+    const lineGen = d3.line().x(d => d[0]).y(d => d[1]);
+
+    g.append('path')
+      .attr('d', lineGen(points))
+      .attr('fill', 'none')
+      .attr('stroke', linkColor[link._type] ?? '#999')
+      .attr('stroke-width', 1.5)
+      .attr('opacity', 0.8)
+      .append('title').text(`${link._type.toUpperCase()}: ${link.name}`);
+  });
+
+  // Draw nodes
+  const nodeSymbol = {
+    junction: d3.symbol().type(d3.symbolCircle).size(40)(),
+    outfall:  d3.symbol().type(d3.symbolTriangle).size(60)(),
+    storage:  d3.symbol().type(d3.symbolSquare).size(80)(),
+  };
+  const nodeColor  = { junction: '#1d3557', outfall: '#e63946', storage: '#457b9d' };
+
+  const nodeList = [
+    ...model.junctions.map(n => ({ ...n, _ntype: 'junction' })),
+    ...model.outfalls.map(n => ({ ...n, _ntype: 'outfall' })),
+    ...model.storage.map(n => ({ ...n, _ntype: 'storage' })),
+  ];
+
+  g.selectAll('.node-sym')
+    .data(nodeList.filter(n => coords[n.name]))
+    .join('path')
+    .attr('class', 'node-sym')
+    .attr('d', d => nodeSymbol[d._ntype])
+    .attr('transform', d => `translate(${xScale(coords[d.name].x)},${yScale(coords[d.name].y)})`)
+    .attr('fill', d => nodeColor[d._ntype])
+    .style('cursor', 'pointer')
+    .on('click', (event, d) => {
+      setState({ selection: { type: d._ntype, id: d.name } });
+      showObjectProperties(d, model);
+    })
+    .append('title').text(d => `${d._ntype.toUpperCase()}: ${d.name}\nElev: ${d.elevation ?? d.elev ?? '–'}`);
+
+  _d3Svg = svg;
+}
+
+// ─── Object properties panel ──────────────────────────────────────────────────
+function showObjectProperties(obj, model) {
+  // Future: open a modal or side panel with full properties table.
+  // For now, log to console — wired up in a subsequent PR.
+  console.table(obj);
+}
+
+// ─── Sidebar section click ────────────────────────────────────────────────────
+document.getElementById('object-tree')?.querySelectorAll('[data-section]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!state.model) return;
+    openSectionTable(el.dataset.section, state.model);
+  });
+});
+
+function openSectionTable(section, model) {
+  const sectionMap = {
+    JUNCTIONS:     model.junctions,
+    OUTFALLS:      model.outfalls,
+    STORAGE:       model.storage,
+    CONDUITS:      model.conduits,
+    PUMPS:         model.pumps,
+    WEIRS:         model.weirs,
+    ORIFICES:      model.orifices,
+    OUTLETS:       model.outlets,
+    SUBCATCHMENTS: model.subcatchments,
+    RAINGAGES:     model.raingages,
+    POLLUTANTS:    model.pollutants,
+    TIMESERIES:    Object.entries(model.timeseries ?? {}).map(([k,v]) => ({ name: k, points: v.length })),
+  };
+  const data = sectionMap[section];
+  if (!data?.length) return;
+
+  const panel = document.getElementById('results-panel');
+  const table = document.getElementById('results-table');
+  if (!panel || !table) return;
+  panel.hidden = false;
+
+  const cols = Object.keys(data[0]).filter(k => !k.startsWith('_')).map(k => ({
+    title: k, field: k, sorter: 'string',
+    formatter: v => String(v.getValue() ?? ''),
+  }));
+
+  if (table._tabulator) table._tabulator.destroy();
+  table._tabulator = new Tabulator(table, {
+    data,
+    columns: cols,
+    layout: 'fitColumns',
+    height: '260px',
+  });
+
+  document.querySelector('#results-tabs [href="#tab-table"]')?.click();
+}
+
+function populateSidebar(model) {
+  // Update element counts in sidebar labels
+  const counts = {
+    RAINGAGES:     model.raingages.length,
+    SUBCATCHMENTS: model.subcatchments.length,
+    JUNCTIONS:     model.junctions.length,
+    OUTFALLS:      model.outfalls.length,
+    STORAGE:       model.storage.length,
+    CONDUITS:      model.conduits.length,
+    PUMPS:         model.pumps.length,
+    ORIFICES:      model.orifices.length,
+    WEIRS:         model.weirs.length,
+  };
+  Object.entries(counts).forEach(([sec, cnt]) => {
+    document.querySelector(`[data-section="${sec}"]`).textContent =
+      `${sec.charAt(0) + sec.slice(1).toLowerCase()} (${cnt})`;
+  });
+}
+
+// ─── Subscribe to state changes → keep UI in sync ────────────────────────────
+subscribe((next, prev) => {
+  if (next.status !== prev.status) setStatus(next.status);
+});

@@ -1,28 +1,31 @@
 {
-  "name": "swmmnpm",
-  "version": "0.0.3",
-  "description": "build config for swmm-js",
-  "main": "index.html",
-  "scripts": {
-    "dev": "lite-server",
-    "build": "node ./deploy/index.html"
-  },
+  "name": "swmm-js",
+  "version": "0.1.0",
+  "description": "Web-centric system for sharing, managing, and creating EPA-SWMM files",
   "author": "Issac Gardner",
   "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "jest --experimental-vm-modules",
+    "test:watch": "jest --watch"
+  },
   "dependencies": {
-    "bootstrap": "^4.6.0",
-    "bootstrap-icons": "^1.4.1",
-    "d3": "^6.6.2",
-    "jquery": "^3.6.0",
-    "light-server": "^2.9.1",
-    "lodash": "^4.17.21",
-    "moment": "^2.29.1",
-    "p-retry": "^4.5.0",
-    "popper": "^1.0.1",
-    "tabulator": "^0.2.40",
-    "tabulator-tables": "^4.9.3"
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
+    "d3": "^7.9.0",
+    "date-fns": "^3.6.0",
+    "lodash-es": "^4.17.21",
+    "tabulator-tables": "^6.2.1"
   },
   "devDependencies": {
-    "lite-server": "^2.6.1"
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "babel-jest": "^29.7.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "vite": "^5.2.0"
   }
 }

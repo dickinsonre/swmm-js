@@ -1,0 +1,137 @@
+; OWA SWMM Example 2 – Dynamic Wave Routing with Storage and Controls
+; Source: OpenWaterAnalytics SWMM test suite / EPA SWMM 5 Example 2
+; Tests:  Dynamic wave hydraulics, storage unit, orifice, weir
+
+[TITLE]
+Example 2 – Dynamic Wave Routing
+Demonstrates storage node, orifice outlet, and overflow weir.
+
+[OPTIONS]
+FLOW_UNITS           CFS
+INFILTRATION         HORTON
+FLOW_ROUTING         DYNWAVE
+LINK_OFFSETS         DEPTH
+MIN_SLOPE            0
+ALLOW_PONDING        NO
+SKIP_STEADY_STATE    NO
+START_DATE           01/01/2007
+START_TIME           00:00:00
+REPORT_START_DATE    01/01/2007
+REPORT_START_TIME    00:00:00
+END_DATE             01/01/2007
+END_TIME             12:00:00
+SWEEP_START          01/01
+SWEEP_END            12/31
+DRY_DAYS             0
+REPORT_STEP          00:15:00
+WET_STEP             00:05:00
+DRY_STEP             01:00:00
+ROUTING_STEP         0:00:30
+INERTIAL_DAMPING     PARTIAL
+NORMAL_FLOW_LIMITED  BOTH
+FORCE_MAIN_EQUATION  H-W
+VARIABLE_STEP        0.75
+LENGTHENING_STEP     0
+MIN_SURFAREA         12.566
+MAX_TRIALS           8
+HEAD_TOLERANCE       0.005
+SYS_FLOW_TOL         5
+LAT_FLOW_TOL         5
+
+[RAINGAGES]
+;;Name  Format    Interval  SCF  Source    SeriesName
+RG1     VOLUME    0:15      1.0  TIMESERIES TS1
+
+[SUBCATCHMENTS]
+;;Name  RainGage  Outlet  Area   %Imperv  Width  %Slope  CurbLen
+S1      RG1       J1      40     70       800    0.5     0
+S2      RG1       J3      10     50       200    0.5     0
+
+[SUBAREAS]
+;;Subcat  NImperv  NPerv  SImperv  SPerv  PctZero  RouteTo
+S1        0.01     0.10   0.05     0.05   25       OUTLET
+S2        0.01     0.10   0.05     0.05   25       OUTLET
+
+[INFILTRATION]
+;;Subcat  MaxRate  MinRate  Decay  DryTime  MaxInfil
+S1        3.0      0.5      4.14   7        0
+S2        3.0      0.5      4.14   7        0
+
+[JUNCTIONS]
+;;Name  Elev   MaxDepth  InitDepth  SurDepth  Ponded
+J1      4.5    10        0          0         0
+J2      3.0    10        0          0         0
+J3      1.0    10        0          0         0
+
+[OUTFALLS]
+;;Name  Elev   Type   StageData  TideGate
+Out1    0.0    FREE              NO
+
+[STORAGE]
+;;Name   Elev   MaxDepth  InitDepth  Shape     CurveName  A1   A2   A0   Ponded  Fevap  Seep
+SU1      2.0    8.0       0          FUNCTIONAL            1000 0    500  0       0      0
+
+[CONDUITS]
+;;Name  From  To    Length  Rough  InOffset  OutOffset  InitFlow  MaxFlow
+C1      J1    J2    400     0.013  0         0          0         0
+C2      J2    SU1   200     0.013  0         0          0         0
+C3      J3    Out1  100     0.013  0         0          0         0
+
+[ORIFICES]
+;;Name  From  To    Type    Offset  Cd    Gated  CloseTime
+Or1     SU1   J3    BOTTOM  0.0     0.65  NO     0
+
+[WEIRS]
+;;Name  From  To    Type       CrestHt  Cd    Gated  EndCon  EndCoeff
+Wr1     SU1   Out1  TRANSVERSE 5.0      3.33  NO     0       0
+
+[XSECTIONS]
+;;Link  Shape     Geom1  Geom2  Geom3  Geom4  Barrels
+C1      CIRCULAR  1.5    0      0      0      1
+C2      CIRCULAR  2.0    0      0      0      1
+C3      CIRCULAR  1.5    0      0      0      1
+Or1     CIRCULAR  1.0    0      0      0
+Wr1     RECT_OPEN 2.0    10.0   0      0
+
+[TIMESERIES]
+;;Name  Date  Time   Value
+TS1           0:00   0.00
+TS1           0:15   0.25
+TS1           0:30   0.50
+TS1           0:45   1.00
+TS1           1:00   0.50
+TS1           1:15   0.25
+TS1           1:30   0.00
+TS1          12:00   0.00
+
+[REPORT]
+INPUT      NO
+CONTROLS   NO
+SUBCATCHMENTS ALL
+NODES      ALL
+LINKS      ALL
+
+[MAP]
+DIMENSIONS  0.00  0.00  10000.00  10000.00
+Units       None
+
+[COORDINATES]
+;;Node  X-Coord  Y-Coord
+J1      1000     5000
+J2      2500     5000
+SU1     4000     5000
+J3      5500     5000
+Out1    7000     5000
+
+[VERTICES]
+
+[POLYGONS]
+;;Subcat  X-Coord  Y-Coord
+S1        500      5500
+S1        1500     5500
+S1        1500     4500
+S1        500      4500
+S2        5000     5500
+S2        6000     5500
+S2        6000     4500
+S2        5000     4500

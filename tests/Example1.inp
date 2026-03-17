@@ -1,0 +1,146 @@
+; OWA SWMM Example 1 – Simple runoff & pipe routing
+; Source: OpenWaterAnalytics SWMM test suite / EPA SWMM 5 Example 1
+; Tests:  Runoff generation, Horton infiltration, kinematic wave routing
+
+[TITLE]
+Example 1 – Simple Runoff and Routing
+Single catchment draining through a short pipe network to a free outfall.
+
+[OPTIONS]
+FLOW_UNITS           CFS
+INFILTRATION         HORTON
+FLOW_ROUTING         KINWAVE
+LINK_OFFSETS         DEPTH
+MIN_SLOPE            0
+ALLOW_PONDING        NO
+SKIP_STEADY_STATE    NO
+START_DATE           01/01/2007
+START_TIME           00:00:00
+REPORT_START_DATE    01/01/2007
+REPORT_START_TIME    00:00:00
+END_DATE             01/01/2007
+END_TIME             12:00:00
+SWEEP_START          01/01
+SWEEP_END            12/31
+DRY_DAYS             0
+REPORT_STEP          00:15:00
+WET_STEP             00:05:00
+DRY_STEP             01:00:00
+ROUTING_STEP         0:01:00
+
+[RAINGAGES]
+;;Name         Format    Interval  SCF  Source    SeriesName
+;;----------   --------  --------  ---  --------  ----------
+RG1            VOLUME    1:00      1.0  TIMESERIES TS1
+
+[EVAPORATION]
+;;Data Source    Parameters
+;;-------------- ----------------
+CONSTANT         0.0
+DRY_ONLY         NO
+
+[SUBCATCHMENTS]
+;;Name   Rain Gage  Outlet  Area   %Imperv  Width  %Slope  CurbLen  SnowPack
+;;----   ---------  ------  -----  -------  -----  ------  -------  --------
+S1       RG1        J1      20     50       400    0.5     0
+S2       RG1        J2      10     25       200    1.0     0
+S3       RG1        J3       8     75       300    2.0     0
+
+[SUBAREAS]
+;;Subcat  NImperv  NPerv  SImperv  SPerv  PctZero  RouteTo
+;;------  -------  -----  -------  -----  -------  -------
+S1        0.01     0.10   0.05     0.05   25       OUTLET
+S2        0.01     0.10   0.05     0.05   25       OUTLET
+S3        0.01     0.10   0.05     0.05   25       OUTLET
+
+[INFILTRATION]
+;;Subcat  MaxRate  MinRate  Decay  DryTime  MaxInfil
+;;------  -------  -------  -----  -------  --------
+S1        3.0      0.5      4.14   7        0
+S2        3.0      0.5      4.14   7        0
+S3        3.0      0.5      4.14   7        0
+
+[JUNCTIONS]
+;;Name   Elev   MaxDepth  InitDepth  SurDepth  Ponded
+;;-----  -----  --------  ---------  --------  ------
+J1       4.0    10.0      0          0         0
+J2       3.0    10.0      0          0         0
+J3       2.0    10.0      0          0         0
+J4       1.0    10.0      0          0         0
+
+[OUTFALLS]
+;;Name   Elev   Type   StageData  TideGate
+;;-----  -----  -----  ---------  --------
+Out1     0.0    FREE              NO
+
+[CONDUITS]
+;;Name  From  To    Length  Roughness  InOffset  OutOffset  InitFlow  MaxFlow
+;;----  ----  ----  ------  ---------  --------  ---------  --------  -------
+C1      J1    J2    400     0.013      0         0          0         0
+C2      J2    J3    300     0.013      0         0          0         0
+C3      J3    J4    200     0.013      0         0          0         0
+C4      J4    Out1  150     0.013      0         0          0         0
+
+[XSECTIONS]
+;;Link  Shape     Geom1  Geom2  Geom3  Geom4  Barrels
+;;----  --------  -----  -----  -----  -----  -------
+C1      CIRCULAR  1.5    0      0      0      1
+C2      CIRCULAR  1.5    0      0      0      1
+C3      CIRCULAR  1.0    0      0      0      1
+C4      CIRCULAR  1.0    0      0      0      1
+
+[TIMESERIES]
+;;Name   Date       Time   Value
+;;-----  ---------  -----  -----
+TS1                 0:00   0.00
+TS1                 0:15   0.00
+TS1                 1:00   0.10
+TS1                 1:15   0.20
+TS1                 1:30   0.40
+TS1                 1:45   0.20
+TS1                 2:00   0.10
+TS1                 2:15   0.00
+TS1                12:00   0.00
+
+[REPORT]
+;;Reporting Options
+INPUT      NO
+CONTROLS   NO
+SUBCATCHMENTS ALL
+NODES      ALL
+LINKS      ALL
+
+[TAGS]
+
+[MAP]
+DIMENSIONS  0.00  0.00  10000.00  10000.00
+Units       None
+
+[COORDINATES]
+;;Node   X-Coord  Y-Coord
+;;-----  -------  -------
+J1       1500     5000
+J2       3000     5000
+J3       4500     5000
+J4       6000     5000
+Out1     7500     5000
+
+[VERTICES]
+;;Link  X-Coord  Y-Coord
+;;----  -------  -------
+
+[POLYGONS]
+;;Subcat  X-Coord  Y-Coord
+;;------  -------  -------
+S1        1000     5500
+S1        2000     5500
+S1        2000     4500
+S1        1000     4500
+S2        2500     5500
+S2        3500     5500
+S2        3500     4500
+S2        2500     4500
+S3        4000     5500
+S3        5000     5500
+S3        5000     4500
+S3        4000     4500
